@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="refresh" content="60">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Device Detail — {{ rep_name }}</title>
+    <style>
+        :root {
+            --bg: #0b1020;
+            --panel: #11182c;
+            --panel-soft: #17213a;
+            --text: #eef2ff;
+            --muted: #98a2b3;
+            --border: #27324f;
+            --green: #16a34a;
+            --red: #dc2626;
+            --link: #93c5fd;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: radial-gradient(circle at top left, #172554, var(--bg) 38%);
+            color: var(--text);
+        }
+        .container { max-width: 1500px; margin: 0 auto; padding: 24px; }
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        h1 { margin: 0 0 8px; font-size: 26px; letter-spacing: -0.02em; }
+        .muted { color: var(--muted); }
+        .button {
+            display: inline-block;
+            color: var(--text);
+            background: rgba(255,255,255,0.08);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 10px 14px;
+            text-decoration: none;
+            font-weight: 700;
+        }
+        .button:hover { background: rgba(255,255,255,0.13); }
+        .panel {
+            background: rgba(17, 24, 44, 0.92);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            overflow: hidden;
+            box-shadow: 0 18px 40px rgba(0,0,0,0.25);
+        }
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; min-width: 1500px; }
+        th, td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: top;
+            text-align: left;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+        th {
+            position: sticky;
+            top: 0;
+            background: var(--panel-soft);
+            color: #c7d2fe;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+        tr:last-child td { border-bottom: none; }
+        .ok { color: var(--green); font-weight: 800; }
+        .bad { color: var(--red); font-weight: 800; }
+        .cell-notes { white-space: normal; min-width: 220px; max-width: 360px; }
+        .empty { padding: 34px; text-align: center; color: var(--muted); }
+        a { color: var(--link); }
+        @media (max-width: 800px) {
+            .topbar { flex-direction: column; }
+            .container { padding: 16px; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="topbar">
+        <div>
+            <h1>Timeline — {{ rep_name }}</h1>
+            <div class="muted">Last 50 reports, newest first. Server time: {{ server_time }}. Page refreshes every 60 seconds.</div>
+        </div>
+        <a class="button" href="/">← Back to dashboard</a>
+    </div>
+
+    <div class="panel">
+        {% if reports %}
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Received</th>
+                        <th>Report time</th>
+                        <th>Device ID</th>
+                        <th>Rep</th>
+                        <th>App</th>
+                        <th>Service</th>
+                        <th>Consent</th>
+                        <th>Permissions</th>
+                        <th>Accessibility</th>
+                        <th>All files</th>
+                        <th>Google</th>
+                        <th>Drive folder</th>
+                        <th>Sheet</th>
+                        <th>Last call</th>
+                        <th>Direction</th>
+                        <th>Duration</th>
+                        <th>Pending</th>
+                        <th>Total uploaded</th>
+                        <th>Last upload</th>
+                        <th>Last sync</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in reports %}
+                    <tr>
+                        <td>{{ row.received_at }}</td>
+                        <td title="{{ row.last_seen_at }}">{{ row.last_seen_ago }}</td>
+                        <td>{{ row.device_id }}</td>
+                        <td>{{ row.rep_name or '—' }}</td>
+                        <td>{{ row.app_version or '—' }}</td>
+                        <td class="{{ bool_class(row.service_running) }}">{{ bool_icon(row.service_running) }}</td>
+                        <td class="{{ bool_class(row.consent_accepted) }}">{{ bool_icon(row.consent_accepted) }}</td>
+                        <td class="{{ bool_class(row.permissions_ok) }}">{{ bool_icon(row.permissions_ok) }}</td>
+                        <td class="{{ bool_class(row.accessibility_enabled) }}">{{ bool_icon(row.accessibility_enabled) }}</td>
+                        <td class="{{ bool_class(row.all_files_access) }}">{{ bool_icon(row.all_files_access) }}</td>
+                        <td class="{{ bool_class(row.google_account_connected) }}">{{ bool_icon(row.google_account_connected) }}</td>
+                        <td class="{{ bool_class(row.drive_folder_configured) }}">{{ bool_icon(row.drive_folder_configured) }}</td>
+                        <td class="{{ bool_class(row.sheet_configured) }}">{{ bool_icon(row.sheet_configured) }}</td>
+                        <td>{{ row.last_call_at }}</td>
+                        <td>{{ row.last_call_direction or '—' }}</td>
+                        <td>{{ row.last_call_duration_seconds if row.last_call_duration_seconds is not none else '—' }}</td>
+                        <td>{{ row.pending_uploads if row.pending_uploads is not none else '—' }}</td>
+                        <td>{{ row.total_uploaded if row.total_uploaded is not none else '—' }}</td>
+                        <td>{{ row.last_upload_at }}</td>
+                        <td>{{ row.last_sync_at }}</td>
+                        <td class="cell-notes">{{ row.notes or '—' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty">No reports found for this rep/device key.</div>
+        {% endif %}
+    </div>
+</div>
+</body>
+</html>

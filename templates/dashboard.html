@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="refresh" content="60">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ITQAN Audit Dashboard</title>
+    <style>
+        :root {
+            --bg: #0b1020;
+            --panel: #11182c;
+            --panel-soft: #17213a;
+            --text: #eef2ff;
+            --muted: #98a2b3;
+            --border: #27324f;
+            --green: #16a34a;
+            --red: #dc2626;
+            --amber: #f59e0b;
+            --link: #93c5fd;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: radial-gradient(circle at top left, #172554, var(--bg) 38%);
+            color: var(--text);
+        }
+        .container { max-width: 1440px; margin: 0 auto; padding: 24px; }
+        .header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        .brand h1 { margin: 0 0 8px; font-size: 28px; letter-spacing: -0.02em; }
+        .brand p { margin: 0; color: var(--muted); }
+        .stats {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+        .stat-card {
+            background: rgba(17, 24, 44, 0.88);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 14px 16px;
+            min-width: 190px;
+            box-shadow: 0 12px 28px rgba(0,0,0,0.22);
+        }
+        .stat-label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }
+        .stat-value { margin-top: 6px; font-size: 16px; font-weight: 700; }
+        .panel {
+            background: rgba(17, 24, 44, 0.92);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            overflow: hidden;
+            box-shadow: 0 18px 40px rgba(0,0,0,0.25);
+        }
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; min-width: 1100px; }
+        th, td {
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+            text-align: left;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+        th {
+            background: var(--panel-soft);
+            color: #c7d2fe;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+        tr:last-child td { border-bottom: none; }
+        tbody tr.alert { background: rgba(220, 38, 38, 0.18); }
+        tbody tr.alert td:first-child { border-left: 4px solid var(--red); }
+        a { color: var(--link); text-decoration: none; font-weight: 700; }
+        a:hover { text-decoration: underline; }
+        .ok { color: var(--green); font-weight: 800; }
+        .bad { color: var(--red); font-weight: 800; }
+        .muted { color: var(--muted); }
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 34px;
+            padding: 4px 8px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.08);
+            font-weight: 700;
+        }
+        .empty {
+            padding: 34px;
+            text-align: center;
+            color: var(--muted);
+        }
+        .footnote { margin-top: 12px; color: var(--muted); font-size: 13px; }
+        @media (max-width: 800px) {
+            .header { flex-direction: column; }
+            .stats { justify-content: flex-start; }
+            .container { padding: 16px; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <div class="brand">
+            <h1>ITQAN Call Record Assistant — Audit Dashboard</h1>
+            <p>Latest status by sales representative / device. Auto-refreshes every 60 seconds.</p>
+        </div>
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-label">Server Time</div>
+                <div class="stat-value">{{ server_time }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Devices</div>
+                <div class="stat-value">{{ total_device_count }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel">
+        {% if reports %}
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Rep name</th>
+                        <th>Device ID</th>
+                        <th>Last seen</th>
+                        <th>Service</th>
+                        <th>Permissions</th>
+                        <th>Accessibility</th>
+                        <th>All files</th>
+                        <th>Google</th>
+                        <th>Pending</th>
+                        <th>Last call</th>
+                        <th>App version</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in reports %}
+                    <tr class="{% if row.alert %}alert{% endif %}">
+                        <td><a href="/device/{{ row.rep_key_url }}">{{ row.rep_key }}</a></td>
+                        <td title="{{ row.device_id }}">{{ row.device_id }}</td>
+                        <td title="{{ row.last_seen_at }}">{{ row.last_seen_ago }}</td>
+                        <td class="{{ bool_class(row.service_running) }}">{{ bool_icon(row.service_running) }}</td>
+                        <td class="{{ bool_class(row.permissions_ok) }}">{{ bool_icon(row.permissions_ok) }}</td>
+                        <td class="{{ bool_class(row.accessibility_enabled) }}">{{ bool_icon(row.accessibility_enabled) }}</td>
+                        <td class="{{ bool_class(row.all_files_access) }}">{{ bool_icon(row.all_files_access) }}</td>
+                        <td class="{{ bool_class(row.google_account_connected) }}">{{ bool_icon(row.google_account_connected) }}</td>
+                        <td><span class="pill">{{ row.pending_uploads if row.pending_uploads is not none else '—' }}</span></td>
+                        <td title="{{ row.last_call_at }}">{{ row.last_call_at }}</td>
+                        <td>{{ row.app_version or '—' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty">No status reports received yet.</div>
+        {% endif %}
+    </div>
+
+    <div class="footnote">
+        Alert rows mean one or more risk conditions were detected: last seen over 2 hours ago, service stopped, permissions/accessibility issue, or pending uploads above 10.
+    </div>
+</div>
+</body>
+</html>
