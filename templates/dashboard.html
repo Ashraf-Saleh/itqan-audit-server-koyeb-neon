@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <meta http-equiv="refresh" content="60">
     <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -118,7 +117,7 @@
         </div>
         <div class="stats">
             <div class="stat-card">
-                <div class="stat-label">Server Time</div>
+                <div class="stat-label">Last Refreshed At</div>
                 <div class="stat-value">{{ server_time }}</div>
             </div>
             <div class="stat-card">
@@ -191,5 +190,12 @@
         For JSON verification, open <code>/api/latest</code>.
     </div>
 </div>
+<script>
+    setTimeout(function () {
+        const url = new URL(window.location.href);
+        url.searchParams.set("_refresh", Date.now().toString());
+        window.location.replace(url.toString());
+    }, 60000);
+</script>
 </body>
 </html>

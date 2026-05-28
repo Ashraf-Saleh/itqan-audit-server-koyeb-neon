@@ -10,7 +10,7 @@ from typing import Any
 from urllib.parse import quote
 
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, Header, HTTPException, Request, status
+from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response, status
 from fastapi.responses import HTMLResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.templating import Jinja2Templates
@@ -174,14 +174,13 @@ def is_alert_report(report: dict[str, Any]) -> bool:
     )
 
 
-
-
-def apply_no_cache_headers(response: HTMLResponse) -> HTMLResponse:
+def apply_no_cache_headers(response: Response) -> Response:
     """Prevent browser/proxy caching so manual refresh shows the latest database rows."""
     response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
     return response
+
 
 def enrich_report(report: dict[str, Any]) -> dict[str, Any]:
     """Add presentation-friendly calculated fields to one report row."""
@@ -213,8 +212,9 @@ def receive_status_report(
 
 
 @app.get("/api/latest")
-def latest_reports_api(_: str = Depends(verify_dashboard_login)) -> dict[str, Any]:
+def latest_reports_api(response: Response, _: str = Depends(verify_dashboard_login)) -> dict[str, Any]:
     """Return latest dashboard rows as JSON for quick operational verification."""
+    apply_no_cache_headers(response)
     rows = [enrich_report(row) for row in fetch_latest_reports_by_rep(DATABASE_URL)]
     return {
         "ok": True,
@@ -258,7 +258,7 @@ def dashboard(request: Request, dashboard_username: str = Depends(verify_dashboa
 def device_detail(request: Request, rep_name: str, dashboard_username: str = Depends(verify_dashboard_login)) -> HTMLResponse:
     """Render the latest 50 reports for one rep/device key."""
     reports = [enrich_report(row) for row in fetch_reports_for_rep(DATABASE_URL, rep_name, limit=50)]
-    return templates.TemplateResponse(
+    response = templates.TemplateResponse(
         request,
         "device_detail.html",
         {
@@ -271,6 +271,7 @@ def device_detail(request: Request, rep_name: str, dashboard_username: str = Dep
             "bool_class": bool_class,
         },
     )
+    return apply_no_cache_headers(response)
 
 
 @app.get("/health")
@@ -280,8 +281,9 @@ def health() -> dict[str, bool]:
 
 
 @app.get("/debug/db")
-def debug_database(_: str = Depends(verify_dashboard_login)) -> dict[str, Any]:
+def debug_database(response: Response, _: str = Depends(verify_dashboard_login)) -> dict[str, Any]:
     """Safe database diagnostic endpoint. Remove or protect later if needed."""
+    apply_no_cache_headers(response)
     result = check_database(DATABASE_URL)
     result["database_url_configured"] = bool(DATABASE_URL)
     return result

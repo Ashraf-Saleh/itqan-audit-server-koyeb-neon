@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <meta http-equiv="refresh" content="60">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
     <meta http-equiv="Pragma" content="no-cache">
@@ -91,7 +90,7 @@
     <div class="topbar">
         <div>
             <h1>Timeline — {{ rep_name }}</h1>
-            <div class="muted">Last 50 reports, newest first. Server time: {{ server_time }}. Page refreshes every 60 seconds.</div>
+            <div class="muted">Last 50 reports, newest first. Last refreshed at: {{ server_time }}. Page refreshes every 60 seconds.</div>
         </div>
         <a class="button" href="/">← Back to dashboard</a>
     </div>
@@ -159,5 +158,12 @@
         {% endif %}
     </div>
 </div>
+<script>
+    setTimeout(function () {
+        const url = new URL(window.location.href);
+        url.searchParams.set("_refresh", Date.now().toString());
+        window.location.replace(url.toString());
+    }, 60000);
+</script>
 </body>
 </html>
