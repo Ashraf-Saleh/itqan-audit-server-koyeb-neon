@@ -125,6 +125,17 @@
         </div>
     </div>
 
+
+
+    {% if db_error %}
+    <div class="panel" style="margin-bottom: 16px; border-color: var(--red);">
+        <div style="padding: 18px; color: #fecaca; background: rgba(220, 38, 38, 0.16);">
+            <strong>Database/dashboard error:</strong> {{ db_error }}
+            <div class="footnote">Open <code>/debug/db</code> to test the database connection. Check Render Environment variables if this mentions DATABASE_URL or connection failure.</div>
+        </div>
+    </div>
+    {% endif %}
+
     <div class="panel">
         {% if reports %}
         <div class="table-wrap">

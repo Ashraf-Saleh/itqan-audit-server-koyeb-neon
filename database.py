@@ -185,3 +185,18 @@ def count_distinct_devices(database_url: str) -> int:
             cur.execute(sql)
             row = cur.fetchone()
     return int((row or {}).get("total") or 0)
+
+
+def check_database(database_url: str) -> dict[str, Any]:
+    """Return a safe database health summary without exposing secrets."""
+    if not database_url:
+        return {"ok": False, "error": "DATABASE_URL is not configured."}
+
+    try:
+        with get_connection(database_url) as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT COUNT(*) AS total_reports FROM status_reports;")
+                row = cur.fetchone() or {}
+        return {"ok": True, "total_reports": int(row.get("total_reports") or 0)}
+    except Exception as exc:  # noqa: BLE001 - intentional safe diagnostic endpoint
+        return {"ok": False, "error": f"{type(exc).__name__}: {exc}"}

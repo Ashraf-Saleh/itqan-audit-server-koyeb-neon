@@ -16,6 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from database import (
     REPORT_FIELDS,
+    check_database,
     count_distinct_devices,
     fetch_latest_reports_by_rep,
     fetch_reports_for_rep,
@@ -183,15 +184,25 @@ def receive_status_report(
 @app.get("/", response_class=HTMLResponse)
 def dashboard(request: Request) -> HTMLResponse:
     """Render the live admin dashboard with one latest row per rep/device."""
-    latest_reports = [enrich_report(row) for row in fetch_latest_reports_by_rep(DATABASE_URL)]
     server_time_ms = int(time.time() * 1000)
+    db_error: str | None = None
+    latest_reports: list[dict[str, Any]] = []
+    total_device_count = 0
+
+    try:
+        latest_reports = [enrich_report(row) for row in fetch_latest_reports_by_rep(DATABASE_URL)]
+        total_device_count = count_distinct_devices(DATABASE_URL)
+    except Exception as exc:  # noqa: BLE001 - show safe operational error on dashboard
+        db_error = f"{type(exc).__name__}: {exc}"
+
     return templates.TemplateResponse(
+        request,
         "dashboard.html",
         {
-            "request": request,
             "reports": latest_reports,
             "server_time": utc_datetime_from_ms(server_time_ms),
-            "total_device_count": count_distinct_devices(DATABASE_URL),
+            "total_device_count": total_device_count,
+            "db_error": db_error,
             "bool_icon": bool_icon,
             "bool_class": bool_class,
         },
@@ -203,9 +214,9 @@ def device_detail(request: Request, rep_name: str) -> HTMLResponse:
     """Render the latest 50 reports for one rep/device key."""
     reports = [enrich_report(row) for row in fetch_reports_for_rep(DATABASE_URL, rep_name, limit=50)]
     return templates.TemplateResponse(
+        request,
         "device_detail.html",
         {
-            "request": request,
             "rep_name": rep_name,
             "reports": reports,
             "fields": ("id", "received_at_ms", *REPORT_FIELDS),
@@ -220,6 +231,14 @@ def device_detail(request: Request, rep_name: str) -> HTMLResponse:
 def health() -> dict[str, bool]:
     """Simple health endpoint for uptime monitors."""
     return {"ok": True}
+
+
+@app.get("/debug/db")
+def debug_database() -> dict[str, Any]:
+    """Safe database diagnostic endpoint. Remove or protect later if needed."""
+    result = check_database(DATABASE_URL)
+    result["database_url_configured"] = bool(DATABASE_URL)
+    return result
 
 
 if __name__ == "__main__":
