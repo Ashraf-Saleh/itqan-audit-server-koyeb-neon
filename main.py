@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import secrets
 import time
 from datetime import datetime, timezone
 from typing import Any
@@ -11,6 +12,7 @@ from urllib.parse import quote
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, status
 from fastapi.responses import HTMLResponse
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -29,6 +31,8 @@ load_dotenv()
 API_KEY = os.getenv("API_KEY", "change_me_secret")
 DATABASE_URL = os.getenv("DATABASE_URL", "")
 PORT = int(os.getenv("PORT", "8000"))
+DASHBOARD_USERNAME = os.getenv("DASHBOARD_USERNAME", "admin")
+DASHBOARD_PASSWORD = os.getenv("DASHBOARD_PASSWORD", "change_me_dashboard_password")
 
 app = FastAPI(
     title="ITQAN Call Record Assistant Audit Server",
@@ -36,6 +40,7 @@ app = FastAPI(
     description="Receives real-time Android device status reports and shows a live admin dashboard.",
 )
 templates = Jinja2Templates(directory="templates")
+dashboard_security = HTTPBasic()
 
 
 class StatusReportIn(BaseModel):
@@ -92,6 +97,21 @@ def verify_api_key(x_api_key: str | None = Header(default=None, alias="X-API-Key
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Missing or invalid API key.",
         )
+
+
+def verify_dashboard_login(credentials: HTTPBasicCredentials = Depends(dashboard_security)) -> str:
+    """Protect read-only dashboard/admin endpoints with simple HTTP Basic auth."""
+    username_ok = secrets.compare_digest(credentials.username, DASHBOARD_USERNAME)
+    password_ok = secrets.compare_digest(credentials.password, DASHBOARD_PASSWORD)
+
+    if not (username_ok and password_ok):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid dashboard username or password.",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+
+    return credentials.username
 
 
 def utc_datetime_from_ms(timestamp_ms: int | None) -> str:
@@ -154,6 +174,15 @@ def is_alert_report(report: dict[str, Any]) -> bool:
     )
 
 
+
+
+def apply_no_cache_headers(response: HTMLResponse) -> HTMLResponse:
+    """Prevent browser/proxy caching so manual refresh shows the latest database rows."""
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
+
 def enrich_report(report: dict[str, Any]) -> dict[str, Any]:
     """Add presentation-friendly calculated fields to one report row."""
     enriched = dict(report)
@@ -181,8 +210,22 @@ def receive_status_report(
     return {"ok": True}
 
 
+
+
+@app.get("/api/latest")
+def latest_reports_api(_: str = Depends(verify_dashboard_login)) -> dict[str, Any]:
+    """Return latest dashboard rows as JSON for quick operational verification."""
+    rows = [enrich_report(row) for row in fetch_latest_reports_by_rep(DATABASE_URL)]
+    return {
+        "ok": True,
+        "server_time_ms": int(time.time() * 1000),
+        "count": len(rows),
+        "reports": rows,
+    }
+
+
 @app.get("/", response_class=HTMLResponse)
-def dashboard(request: Request) -> HTMLResponse:
+def dashboard(request: Request, dashboard_username: str = Depends(verify_dashboard_login)) -> HTMLResponse:
     """Render the live admin dashboard with one latest row per rep/device."""
     server_time_ms = int(time.time() * 1000)
     db_error: str | None = None
@@ -195,7 +238,7 @@ def dashboard(request: Request) -> HTMLResponse:
     except Exception as exc:  # noqa: BLE001 - show safe operational error on dashboard
         db_error = f"{type(exc).__name__}: {exc}"
 
-    return templates.TemplateResponse(
+    response = templates.TemplateResponse(
         request,
         "dashboard.html",
         {
@@ -203,14 +246,16 @@ def dashboard(request: Request) -> HTMLResponse:
             "server_time": utc_datetime_from_ms(server_time_ms),
             "total_device_count": total_device_count,
             "db_error": db_error,
+            "dashboard_username": dashboard_username,
             "bool_icon": bool_icon,
             "bool_class": bool_class,
         },
     )
+    return apply_no_cache_headers(response)
 
 
 @app.get("/device/{rep_name}", response_class=HTMLResponse)
-def device_detail(request: Request, rep_name: str) -> HTMLResponse:
+def device_detail(request: Request, rep_name: str, dashboard_username: str = Depends(verify_dashboard_login)) -> HTMLResponse:
     """Render the latest 50 reports for one rep/device key."""
     reports = [enrich_report(row) for row in fetch_reports_for_rep(DATABASE_URL, rep_name, limit=50)]
     return templates.TemplateResponse(
@@ -221,6 +266,7 @@ def device_detail(request: Request, rep_name: str) -> HTMLResponse:
             "reports": reports,
             "fields": ("id", "received_at_ms", *REPORT_FIELDS),
             "server_time": utc_datetime_from_ms(int(time.time() * 1000)),
+            "dashboard_username": dashboard_username,
             "bool_icon": bool_icon,
             "bool_class": bool_class,
         },
@@ -234,7 +280,7 @@ def health() -> dict[str, bool]:
 
 
 @app.get("/debug/db")
-def debug_database() -> dict[str, Any]:
+def debug_database(_: str = Depends(verify_dashboard_login)) -> dict[str, Any]:
     """Safe database diagnostic endpoint. Remove or protect later if needed."""
     result = check_database(DATABASE_URL)
     result["database_url_configured"] = bool(DATABASE_URL)

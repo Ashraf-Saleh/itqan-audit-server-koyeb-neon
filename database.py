@@ -143,7 +143,7 @@ def fetch_latest_reports_by_rep(database_url: str) -> list[dict[str, Any]]:
             normalized.*,
             ROW_NUMBER() OVER (
                 PARTITION BY rep_key
-                ORDER BY timestamp_ms DESC, received_at_ms DESC, id DESC
+                ORDER BY received_at_ms DESC, timestamp_ms DESC, id DESC
             ) AS rn
         FROM normalized
     )
@@ -167,7 +167,7 @@ def fetch_reports_for_rep(database_url: str, rep_name: str, limit: int = 50) -> 
         COALESCE(NULLIF(TRIM(rep_name), ''), device_id) AS rep_key
     FROM status_reports
     WHERE COALESCE(NULLIF(TRIM(rep_name), ''), device_id) = %s
-    ORDER BY timestamp_ms DESC, received_at_ms DESC, id DESC
+    ORDER BY received_at_ms DESC, timestamp_ms DESC, id DESC
     LIMIT %s;
     """
     with get_connection(database_url) as conn:

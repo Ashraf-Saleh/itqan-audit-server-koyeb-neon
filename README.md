@@ -23,6 +23,7 @@ No ORM is used. Database access is raw SQL through `psycopg`.
 - PostgreSQL storage using raw SQL, no ORM.
 - Full history is preserved: every report is appended, not overwritten.
 - Dashboard at `GET /` shows one latest row per representative/device.
+- Dashboard and admin JSON/debug pages are protected with simple HTTP Basic username/password from environment variables.
 - Detail page at `GET /device/{rep_name}` shows the latest 50 reports.
 - Alert highlighting when:
   - Last seen is older than 2 hours.
@@ -96,6 +97,10 @@ Then edit `.env`:
 API_KEY=your_strong_secret_key
 DATABASE_URL=postgresql://user:password@ep-example.neon.tech/neondb?sslmode=require
 PORT=8000
+DASHBOARD_USERNAME=admin
+DASHBOARD_PASSWORD=change_this_dashboard_password
+DASHBOARD_USERNAME=admin
+DASHBOARD_PASSWORD=change_this_dashboard_password
 ```
 
 Run the server:
@@ -120,6 +125,10 @@ Then edit `.env`:
 API_KEY=your_strong_secret_key
 DATABASE_URL=postgresql://user:password@ep-example.neon.tech/neondb?sslmode=require
 PORT=8000
+DASHBOARD_USERNAME=admin
+DASHBOARD_PASSWORD=change_this_dashboard_password
+DASHBOARD_USERNAME=admin
+DASHBOARD_PASSWORD=change_this_dashboard_password
 ```
 
 Run the server:
@@ -221,6 +230,10 @@ Important: do **not** commit `.env`. It is already ignored by `.gitignore`.
 API_KEY=your_strong_secret_key
 DATABASE_URL=postgresql://user:password@ep-example.neon.tech/neondb?sslmode=require
 PORT=8000
+DASHBOARD_USERNAME=admin
+DASHBOARD_PASSWORD=change_this_dashboard_password
+DASHBOARD_USERNAME=admin
+DASHBOARD_PASSWORD=change_this_dashboard_password
 ```
 
 10. Set health check path to:
@@ -298,15 +311,38 @@ Send status every 15 minutes and on app start/stop.
 
 ---
 
-## 8) Firewall / dashboard security note
+## 8) Dashboard login
 
-The dashboard has no login page by design. The API key only protects `POST /api/status`.
+The dashboard uses simple browser HTTP Basic authentication. Set these environment variables in Render or your local `.env`:
 
-For stronger production security, use one of these options later:
+```env
+DASHBOARD_USERNAME=admin
+DASHBOARD_PASSWORD=change_this_dashboard_password
+```
 
-1. Restrict dashboard access by network/firewall if using a VPS.
-2. Add a simple dashboard password.
-3. Place the dashboard behind Cloudflare Access or another zero-trust layer.
+Protected read-only/admin endpoints:
+
+```text
+/
+/device/{rep_name}
+/api/latest
+/debug/db
+```
+
+Public endpoints:
+
+```text
+/health
+```
+
+Android write endpoint still uses API key authentication only:
+
+```text
+POST /api/status
+Header: X-API-Key
+```
+
+For production, also keep Render/Cloudflare access controls if needed.
 
 ---
 
@@ -349,3 +385,24 @@ Make sure the service port is `8000`. The Dockerfile starts the app using:
 ```bash
 uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}
 ```
+
+## Dashboard refresh / cache note
+
+This version adds cache-control headers to the dashboard and detail pages so manual browser refresh shows the latest PostgreSQL rows.
+
+The dashboard still auto-refreshes every 60 seconds. You can also verify latest rows directly as JSON:
+
+```text
+https://YOUR_RENDER_SERVICE.onrender.com/api/latest
+```
+
+### Dashboard asks for username/password
+
+Use the values configured in Render Environment:
+
+```env
+DASHBOARD_USERNAME=admin
+DASHBOARD_PASSWORD=your_dashboard_password
+```
+
+If the browser keeps asking again, the username or password is wrong. Update the Render environment variables and redeploy.

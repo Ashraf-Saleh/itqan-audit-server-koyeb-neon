@@ -3,6 +3,9 @@
 <head>
     <meta charset="utf-8">
     <meta http-equiv="refresh" content="60">
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>ITQAN Audit Dashboard</title>
     <style>
@@ -111,7 +114,7 @@
     <div class="header">
         <div class="brand">
             <h1>ITQAN Call Record Assistant — Audit Dashboard</h1>
-            <p>Latest status by sales representative / device. Auto-refreshes every 60 seconds.</p>
+            <p>Latest status by sales representative / device. Auto-refreshes every 60 seconds. Manual refresh is cache-safe.</p>
         </div>
         <div class="stats">
             <div class="stat-card">
@@ -121,6 +124,10 @@
             <div class="stat-card">
                 <div class="stat-label">Total Devices</div>
                 <div class="stat-value">{{ total_device_count }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Dashboard User</div>
+                <div class="stat-value">{{ dashboard_username }}</div>
             </div>
         </div>
     </div>
@@ -181,6 +188,7 @@
 
     <div class="footnote">
         Alert rows mean one or more risk conditions were detected: last seen over 2 hours ago, service stopped, permissions/accessibility issue, or pending uploads above 10.
+        For JSON verification, open <code>/api/latest</code>.
     </div>
 </div>
 </body>
