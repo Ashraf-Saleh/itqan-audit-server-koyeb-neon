@@ -5,9 +5,10 @@ from __future__ import annotations
 import os
 import secrets
 import time
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any
 from urllib.parse import quote
+from zoneinfo import ZoneInfo
 
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response, status
@@ -33,6 +34,7 @@ DATABASE_URL = os.getenv("DATABASE_URL", "")
 PORT = int(os.getenv("PORT", "8000"))
 DASHBOARD_USERNAME = os.getenv("DASHBOARD_USERNAME", "admin")
 DASHBOARD_PASSWORD = os.getenv("DASHBOARD_PASSWORD", "change_me_dashboard_password")
+DISPLAY_TIMEZONE = ZoneInfo("Africa/Cairo")
 
 app = FastAPI(
     title="ITQAN Call Record Assistant Audit Server",
@@ -114,12 +116,12 @@ def verify_dashboard_login(credentials: HTTPBasicCredentials = Depends(dashboard
     return credentials.username
 
 
-def utc_datetime_from_ms(timestamp_ms: int | None) -> str:
-    """Format epoch milliseconds as a UTC timestamp for the dashboard."""
+def local_datetime_from_ms(timestamp_ms: int | None) -> str:
+    """Format epoch milliseconds in the dashboard's Cairo local time."""
     if timestamp_ms is None:
         return "—"
     try:
-        return datetime.fromtimestamp(timestamp_ms / 1000, tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+        return datetime.fromtimestamp(timestamp_ms / 1000, tz=DISPLAY_TIMEZONE).strftime("%Y-%m-%d %H:%M:%S Africa/Cairo")
     except (OSError, OverflowError, ValueError):
         return "Invalid timestamp"
 
@@ -189,11 +191,11 @@ def enrich_report(report: dict[str, Any]) -> dict[str, Any]:
     enriched["rep_key"] = rep_key
     enriched["rep_key_url"] = quote(str(rep_key), safe="")
     enriched["last_seen_ago"] = time_ago(enriched.get("timestamp_ms"))
-    enriched["last_seen_at"] = utc_datetime_from_ms(enriched.get("timestamp_ms"))
-    enriched["last_call_at"] = utc_datetime_from_ms(enriched.get("last_call_start_ms"))
-    enriched["last_upload_at"] = utc_datetime_from_ms(enriched.get("last_upload_ms"))
-    enriched["last_sync_at"] = utc_datetime_from_ms(enriched.get("last_sync_ms"))
-    enriched["received_at"] = utc_datetime_from_ms(enriched.get("received_at_ms"))
+    enriched["last_seen_at"] = local_datetime_from_ms(enriched.get("timestamp_ms"))
+    enriched["last_call_at"] = local_datetime_from_ms(enriched.get("last_call_start_ms"))
+    enriched["last_upload_at"] = local_datetime_from_ms(enriched.get("last_upload_ms"))
+    enriched["last_sync_at"] = local_datetime_from_ms(enriched.get("last_sync_ms"))
+    enriched["received_at"] = local_datetime_from_ms(enriched.get("received_at_ms"))
     enriched["alert"] = is_alert_report(enriched)
     return enriched
 
@@ -243,7 +245,7 @@ def dashboard(request: Request, dashboard_username: str = Depends(verify_dashboa
         "dashboard.html",
         {
             "reports": latest_reports,
-            "server_time": utc_datetime_from_ms(server_time_ms),
+            "server_time": local_datetime_from_ms(server_time_ms),
             "total_device_count": total_device_count,
             "db_error": db_error,
             "dashboard_username": dashboard_username,
@@ -265,7 +267,7 @@ def device_detail(request: Request, rep_name: str, dashboard_username: str = Dep
             "rep_name": rep_name,
             "reports": reports,
             "fields": ("id", "received_at_ms", *REPORT_FIELDS),
-            "server_time": utc_datetime_from_ms(int(time.time() * 1000)),
+            "server_time": local_datetime_from_ms(int(time.time() * 1000)),
             "dashboard_username": dashboard_username,
             "bool_icon": bool_icon,
             "bool_class": bool_class,

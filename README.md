@@ -32,6 +32,7 @@ No ORM is used. Database access is raw SQL through `psycopg`.
   - `accessibility_enabled = false`.
   - `pending_uploads > 10`.
 - Pages auto-refresh every 30 seconds.
+- Dashboard timestamps are displayed in `Africa/Cairo` local time.
 - `/health` endpoint for Koyeb health checks.
 - Includes a `Dockerfile` for reliable Koyeb deployment.
 

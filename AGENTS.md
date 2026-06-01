@@ -22,7 +22,7 @@ The Android API contract must remain stable. Dashboard browser authentication is
 - `database.py` - all PostgreSQL access: table/index creation, inserts, dashboard latest query, detail query, counts, and diagnostics.
 - `templates/dashboard.html` - main dashboard page showing one latest report per rep/device.
 - `templates/device_detail.html` - report timeline for a single rep/device key.
-- `requirements.txt` - Python dependencies: FastAPI, Uvicorn, Jinja2, python-dotenv, and psycopg.
+- `requirements.txt` - Python dependencies: FastAPI, Uvicorn, Jinja2, python-dotenv, psycopg, and tzdata.
 - `.env.example` - documented local/server environment variables.
 - `README.md` - setup, deployment, endpoint, and troubleshooting documentation.
 
