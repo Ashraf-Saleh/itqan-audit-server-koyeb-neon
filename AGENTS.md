@@ -88,8 +88,8 @@ Android app configuration may use the base Render service URL and append `/api/s
 - `POST /api/status` returns `401` without `X-API-Key`.
 - `POST /api/status` accepts a valid JSON report with a valid `X-API-Key`.
 - Dashboard shows the latest submitted device/rep.
-- Dashboard auto-refresh updates after 60 seconds.
-- Device detail page auto-refreshes after 60 seconds.
+- Dashboard auto-refresh updates after 30 seconds.
+- Device detail page auto-refreshes after 30 seconds.
 - `/api/latest` and `/debug/db`, if present, require dashboard login and send no-cache headers.
 
 ## Known Pitfalls

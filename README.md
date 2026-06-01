@@ -31,7 +31,7 @@ No ORM is used. Database access is raw SQL through `psycopg`.
   - `permissions_ok = false`.
   - `accessibility_enabled = false`.
   - `pending_uploads > 10`.
-- Pages auto-refresh every 60 seconds.
+- Pages auto-refresh every 30 seconds.
 - `/health` endpoint for Koyeb health checks.
 - Includes a `Dockerfile` for reliable Koyeb deployment.
 
@@ -390,7 +390,7 @@ uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}
 
 This version adds cache-control headers to the dashboard and detail pages so manual browser refresh shows the latest PostgreSQL rows.
 
-The dashboard still auto-refreshes every 60 seconds. You can also verify latest rows directly as JSON:
+The dashboard auto-refreshes every 30 seconds. You can also verify latest rows directly as JSON:
 
 ```text
 https://YOUR_RENDER_SERVICE.onrender.com/api/latest

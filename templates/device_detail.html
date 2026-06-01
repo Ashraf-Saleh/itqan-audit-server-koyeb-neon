@@ -90,7 +90,7 @@
     <div class="topbar">
         <div>
             <h1>Timeline — {{ rep_name }}</h1>
-            <div class="muted">Last 50 reports, newest first. Last refreshed at: {{ server_time }}. Page refreshes every 60 seconds.</div>
+            <div class="muted">Last 50 reports, newest first. Last refreshed at: {{ server_time }}. Page refreshes every 30 seconds.</div>
         </div>
         <a class="button" href="/">← Back to dashboard</a>
     </div>
@@ -163,7 +163,7 @@
         const url = new URL(window.location.href);
         url.searchParams.set("_refresh", Date.now().toString());
         window.location.replace(url.toString());
-    }, 60000);
+    }, 30000);
 </script>
 </body>
 </html>
